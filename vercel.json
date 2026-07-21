@@ -1,6 +1,0 @@
-{
-  "rewrites": [
-    { "source": "/proptrack", "destination": "/proptrack/index.html" },
-    { "source": "/biztrack", "destination": "/biztrack/index.html" }
-  ]
-}
