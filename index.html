@@ -3,45 +3,1395 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Blue Harbor Enterprise</title>
+<title>PropTrack — Property Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // ---- Fill these in from Supabase Dashboard → Settings → API ----
+  const SUPABASE_URL = 'https://cieszetxefdeothqqhzv.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_K1yqD8KvZVQE8inQ60Gm1w_Oxq7MfaG';
+  // ------------------------------------------------------------------
+  const APP_NAME = 'proptrack';
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+</script>
 <style>
-  :root{ --navy-950:#0a1428; --navy-900:#0f1e3a; --gold-500:#c9a24a; --gold-600:#a9822f; }
+  :root{
+    --navy-950:#0a1428;
+    --navy-900:#0f1e3a;
+    --navy-800:#152a4e;
+    --navy-700:#1d3a68;
+    --gold-500:#c9a24a;
+    --gold-600:#a9822f;
+    --gold-100:#f6ecd4;
+    --bg:#f4f6fa;
+    --card:#ffffff;
+    --border:#e6e9f1;
+    --text:#111b33;
+    --muted:#6c7690;
+    --green:#188a52;
+    --red:#c8433f;
+    --amber:#b9821e;
+    --radius:14px;
+    --radius-sm:9px;
+    --shadow:0 1px 2px rgba(16,28,57,.04), 0 10px 28px rgba(16,28,57,.06);
+    --shadow-lg:0 20px 60px rgba(8,14,30,.35);
+  }
   *{box-sizing:border-box;}
-  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
-    font-family:'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;
+  html,body{height:100%;}
+  body{margin:0;font-family:'Inter', system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;letter-spacing:-.01em;}
+  button{font-family:inherit;cursor:pointer;}
+  input,select{font-family:inherit;}
+  svg{display:inline-block;}
+
+  /* ---------- LOGIN ---------- */
+  #loginView{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
     background:radial-gradient(1200px 600px at 12% -10%, #1c3868 0%, transparent 60%),
       radial-gradient(1000px 600px at 110% 110%, #16264d 0%, transparent 60%), var(--navy-950);
-    color:#fff;}
-  .wrap{text-align:center;max-width:640px;padding:24px;}
-  .brand{font-size:14px;letter-spacing:2px;text-transform:uppercase;color:#8ea0c7;margin-bottom:8px;}
-  h1{font-size:32px;margin:0 0 34px;}
-  .cards{display:flex;gap:18px;justify-content:center;flex-wrap:wrap;}
-  a.card{display:block;width:220px;background:#0f1e3a;border:1px solid rgba(201,162,74,.3);border-radius:16px;
-    padding:28px 20px;color:#fff;text-decoration:none;transition:.15s;}
-  a.card:hover{border-color:var(--gold-500);transform:translateY(-3px);}
-  .card .logo{width:44px;height:44px;border-radius:12px;margin:0 auto 14px;
-    background:linear-gradient(135deg, var(--gold-500), var(--gold-600));
-    display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--navy-950);}
-  .card .name{font-weight:700;font-size:16px;}
-  .card .sub{color:#8ea0c7;font-size:12.5px;margin-top:4px;}
+    padding:24px;
+  }
+  .login-card{width:100%;max-width:460px;background:var(--navy-900);border:1px solid rgba(201,162,74,.22);border-radius:20px;padding:44px 38px;box-shadow:var(--shadow-lg);}
+  .login-logo{display:flex;align-items:center;gap:13px;margin-bottom:6px;}
+  .logo-mark{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg, var(--gold-500), var(--gold-600));display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--navy-950);font-size:16px;flex-shrink:0;letter-spacing:0;}
+  .login-title{color:#fff;font-size:22px;font-weight:700;}
+  .login-sub{color:#8ea0c7;font-size:13.5px;margin:8px 0 28px;}
+  .profile-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:6px;}
+  .profile-card{background:var(--navy-800);border:1.5px solid rgba(255,255,255,.06);border-radius:14px;padding:18px 10px;text-align:center;transition:.15s;}
+  .profile-card:hover{border-color:var(--gold-500);transform:translateY(-2px);}
+  .profile-card.active{border-color:var(--gold-500);background:#182c54;}
+  .avatar-circle{width:44px;height:44px;border-radius:50%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:var(--navy-950);background:var(--gold-500);flex-shrink:0;}
+  .profile-name{color:#fff;font-size:12.5px;font-weight:600;}
+  .profile-role{color:#8ea0c7;font-size:10.5px;margin-top:3px;text-transform:uppercase;letter-spacing:.5px;}
+  .pin-area{margin-top:24px;display:none;}
+  .pin-area.show{display:block;}
+  .pin-label{color:#c7d2ea;font-size:13px;margin-bottom:9px;display:flex;align-items:center;gap:7px;}
+  .pin-input-row{display:flex;gap:10px;}
+  .pin-input{flex:1;background:var(--navy-950);border:1.5px solid rgba(255,255,255,.14);border-radius:10px;padding:12px 14px;color:#fff;font-size:17px;letter-spacing:5px;outline:none;text-align:center;}
+  .pin-input:focus{border-color:var(--gold-500);}
+  .btn-gold{background:linear-gradient(135deg, var(--gold-500), var(--gold-600));color:var(--navy-950);border:none;border-radius:10px;padding:12px 22px;font-weight:700;font-size:13.5px;}
+  .btn-gold:hover{filter:brightness(1.06);}
+  .login-error{color:#ff9b9b;font-size:12.5px;margin-top:10px;display:none;}
+  .login-hint{color:#54638c;font-size:11.5px;margin-top:20px;text-align:center;}
+
+  /* ---------- APP SHELL ---------- */
+  #appView{display:none;min-height:100vh;}
+  .app-grid{display:grid;grid-template-columns:250px 1fr;min-height:100vh;}
+  .sidebar{background:var(--navy-900);padding:20px 16px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;}
+  .brand{display:flex;align-items:center;gap:11px;padding:4px 8px 16px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:14px;}
+  .brand-name{color:#fff;font-weight:700;font-size:16.5px;}
+  .brand-sub{color:#8296bf;font-size:10.5px;margin-top:-1px;letter-spacing:.2px;}
+  .company-link{display:flex;align-items:center;justify-content:space-between;color:#c7d2ea;font-size:12.5px;font-weight:600;padding:9px 8px;margin-bottom:6px;border-radius:9px;gap:8px;text-decoration:none;}
+  .company-link:hover{background:rgba(255,255,255,.05);}
+  .nav-section-label{color:#54638c;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;margin:15px 10px 6px;}
+  .nav-item{display:flex;align-items:center;gap:11px;color:#c3cfeb;text-decoration:none;font-size:13.5px;font-weight:500;padding:9px 12px;border-radius:9px;margin-bottom:1px;border:none;background:transparent;width:100%;text-align:left;transition:.12s;}
+  .nav-item:hover{background:rgba(255,255,255,.05);color:#fff;}
+  .nav-item.active{background:var(--gold-500);color:var(--navy-950);font-weight:700;}
+  .nav-icon{width:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .sidebar-footer{margin-top:auto;border-top:1px solid rgba(255,255,255,.08);padding-top:13px;}
+  .remind-link{display:flex;align-items:center;gap:11px;color:#c3cfeb;font-size:13px;font-weight:600;padding:9px 8px;margin-bottom:6px;border-radius:9px;}
+  .remind-link:hover{background:rgba(255,255,255,.05);}
+  .user-chip{display:flex;align-items:center;gap:10px;padding:7px 8px;}
+  .user-chip .avatar-circle{width:32px;height:32px;font-size:12px;margin:0;}
+  .user-chip-name{color:#fff;font-size:13px;font-weight:600;}
+  .user-chip-role{color:#8296bf;font-size:10.5px;}
+  .logout-btn{margin-top:8px;width:100%;background:transparent;border:1px solid rgba(255,255,255,.12);color:#c3cfeb;padding:8px;border-radius:9px;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:7px;}
+  .logout-btn:hover{border-color:var(--gold-500);color:#fff;}
+
+  .main{padding:28px 36px 60px;max-width:1440px;}
+  .page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:14px;}
+  .page-title{font-size:25px;font-weight:700;margin:0;letter-spacing:-.02em;}
+  .page-sub{color:var(--muted);font-size:13.5px;margin:4px 0 0;}
+  .btn-primary{background:var(--navy-900);color:#fff;border:none;border-radius:10px;padding:10.5px 18px;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:8px;transition:.12s;}
+  .btn-primary:hover{background:var(--navy-800);}
+  .btn-outline{background:#fff;color:var(--navy-900);border:1.5px solid var(--border);border-radius:10px;padding:9px 15px;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:7px;}
+  .btn-outline:hover{border-color:var(--navy-700);}
+
+  .page{display:none;} .page.active{display:block;animation:fadein .18s ease;}
+  @keyframes fadein{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+  .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow);}
+  .stat-label{font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);}
+  .stat-row{display:flex;align-items:center;justify-content:space-between;margin-top:8px;}
+  .stat-value{font-size:25px;font-weight:700;letter-spacing:-.02em;}
+  .stat-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .stat-foot{color:var(--muted);font-size:12px;margin-top:6px;}
+
+  .grid-2{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;align-items:start;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;box-shadow:var(--shadow);margin-bottom:14px;}
+  .card-title{font-size:14.5px;font-weight:700;margin:0 0 14px;display:flex;align-items:center;justify-content:space-between;}
+  .link-gold{color:var(--gold-600);font-weight:700;font-size:12.5px;text-decoration:none;cursor:pointer;display:inline-flex;align-items:center;gap:4px;}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;padding:9px 10px;border-bottom:1.5px solid var(--border);}
+  td{padding:11px 10px;border-bottom:1px solid var(--border);}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:#fafbfd;}
+  .pill{padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;display:inline-block;}
+  .pill-green{background:#e4f5eb;color:var(--green);}
+  .pill-amber{background:#fbf0da;color:var(--amber);}
+  .pill-red{background:#faeaea;color:var(--red);}
+  .pill-navy{background:#e6ecf7;color:var(--navy-800);}
+  .amount-pos{color:var(--green);font-weight:700;}
+  .amount-neg{color:var(--red);font-weight:700;}
+  .icon-btn{background:transparent;border:none;padding:6px;border-radius:8px;color:var(--muted);display:inline-flex;align-items:center;justify-content:center;}
+  .icon-btn:hover{background:var(--bg);color:var(--navy-900);}
+
+  .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+  .filter-chip{background:#fff;border:1.5px solid var(--border);color:var(--muted);border-radius:999px;padding:7px 14px;font-size:12px;font-weight:600;}
+  .filter-chip.active{background:var(--navy-900);color:#fff;border-color:var(--navy-900);}
+
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px;}
+  .field{display:flex;flex-direction:column;gap:6px;}
+  .field label{font-size:12px;font-weight:700;color:var(--text);}
+  .field input, .field select, .field textarea{border:1.5px solid var(--border);border-radius:9px;padding:10px 12px;font-size:13.5px;color:var(--text);outline:none;}
+  .field input:focus, .field select:focus{border-color:var(--gold-500);}
+
+  .search-input{width:100%;max-width:320px;border:1.5px solid var(--border);border-radius:10px;padding:10px 14px 10px 38px;font-size:13.5px;outline:none;background:#fff url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="%236c7690" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>') no-repeat 12px center;}
+  .search-input:focus{border-color:var(--gold-500);}
+
+  .empty-state{text-align:center;padding:54px 20px;color:var(--muted);}
+  .empty-state .icon-wrap{width:52px;height:52px;border-radius:14px;background:var(--bg);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;color:var(--muted);}
+  .empty-state b{color:var(--text);font-size:14px;}
+
+  .list-row{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border:1px solid var(--border);border-radius:12px;margin-bottom:9px;transition:.12s;}
+  .list-row:hover{border-color:var(--gold-500);}
+  .list-avatar{width:40px;height:40px;border-radius:11px;background:#e6ecf7;color:var(--navy-800);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .list-title{font-weight:700;font-size:14px;}
+  .list-sub{color:var(--muted);font-size:12px;margin-top:3px;display:flex;align-items:center;gap:5px;}
+  .row-actions{display:flex;gap:2px;}
+
+  .tt-grid{display:grid;grid-template-columns:280px 1fr;gap:14px;}
+  .worker-list-item{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-radius:10px;margin-bottom:5px;cursor:pointer;}
+  .worker-list-item:hover{background:var(--bg);}
+  .worker-list-item.active{background:var(--navy-900);}
+  .worker-list-item.active .w-name{color:#fff;}
+  .worker-list-item.active .w-role{color:#b9c6e6;}
+  .w-name{font-weight:700;font-size:13px;}
+  .w-role{font-size:11px;color:var(--muted);margin-top:2px;}
+  .week-nav{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .day-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:9px;}
+  .day-cell{border:1.5px solid var(--border);border-radius:10px;padding:12px 8px;text-align:center;}
+  .day-cell .d-label{font-size:10.5px;color:var(--muted);font-weight:700;}
+  .day-cell .d-date{font-size:12.5px;font-weight:700;margin-top:2px;}
+  .day-cell .d-status{margin-top:8px;font-size:10.5px;font-weight:700;padding:3px 6px;border-radius:6px;}
+  .day-log-btn{margin-top:8px;background:var(--bg);border:none;border-radius:7px;padding:6px 8px;font-size:10.5px;font-weight:700;color:var(--navy-800);width:100%;}
+  .day-log-btn:hover{background:#e6ecf7;}
+  .tt-summary{display:flex;gap:24px;margin-top:16px;flex-wrap:wrap;}
+  .tt-summary .item{font-size:12px;color:var(--muted);}
+  .tt-summary .item b{display:block;font-size:19px;color:var(--text);}
+  .reimb-box{margin-top:16px;background:#fbf4e3;border:1px solid var(--gold-500);border-radius:12px;padding:14px 16px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;}
+
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(9,16,34,.52);align-items:center;justify-content:center;z-index:50;padding:20px;}
+  .modal-overlay.show{display:flex;}
+  .modal-box{background:#fff;border-radius:16px;padding:26px;width:100%;max-width:460px;box-shadow:var(--shadow-lg);max-height:88vh;overflow-y:auto;}
+  .modal-title{font-size:16.5px;font-weight:700;margin:0 0 16px;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;}
+
+  .tabbar{display:flex;gap:3px;background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:4px;width:fit-content;margin-bottom:18px;}
+  .tab-btn{border:none;background:transparent;padding:8px 16px;border-radius:7px;font-size:12.5px;font-weight:700;color:var(--muted);}
+  .tab-btn.active{background:var(--navy-900);color:#fff;}
+
+  .role-badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:999px;text-transform:uppercase;letter-spacing:.4px;}
+  .role-owner{background:var(--gold-100);color:var(--gold-600);}
+  .role-manager{background:#e6ecf7;color:var(--navy-800);}
+  .role-maintenance{background:#e4f5eb;color:var(--green);}
+  .role-custom{background:#f0e9fb;color:#6d4fb0;}
+  .perm-check-list{display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;border:1.5px solid var(--border);border-radius:9px;padding:12px;}
+  .perm-check-row{display:flex;align-items:center;gap:9px;font-size:13px;}
+  .perm-check-row input{width:16px;height:16px;accent-color:var(--navy-900);}
+
+  @media (max-width: 980px){
+    .app-grid{grid-template-columns:1fr;}
+    .sidebar{position:relative;height:auto;}
+    .stat-grid{grid-template-columns:1fr 1fr;}
+    .grid-2{grid-template-columns:1fr;}
+    .form-grid{grid-template-columns:1fr;}
+    .tt-grid{grid-template-columns:1fr;}
+    .profile-grid{grid-template-columns:1fr 1fr;}
+  }
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="brand">Blue Harbor Enterprise</div>
-    <h1>Choose an app</h1>
-    <div class="cards">
-      <a class="card" href="/proptrack">
-        <div class="logo">PT</div>
-        <div class="name">PropTrack</div>
-        <div class="sub">Property Manager</div>
-      </a>
-      <a class="card" href="/biztrack">
-        <div class="logo">BT</div>
-        <div class="name">BizTrack</div>
-        <div class="sub">Business Manager</div>
-      </a>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="loginView">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-mark">PT</div>
+      <div class="login-title">PropTrack</div>
+    </div>
+    <div class="login-sub">Select your profile to sign in.</div>
+    <div class="profile-grid" id="profileGrid"></div>
+    <div class="pin-area" id="pinArea">
+      <div class="pin-label">Enter PIN for <b id="pinUserName" style="color:#fff;"></b></div>
+      <div class="pin-input-row">
+        <input type="password" maxlength="12" inputmode="numeric" class="pin-input" id="pinInput" placeholder="••••">
+        <button class="btn-gold" onclick="attemptLogin()">Sign In</button>
+      </div>
+      <div class="login-error" id="loginError">Incorrect PIN. Try again.</div>
     </div>
   </div>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="appView">
+  <div class="app-grid">
+    <div class="sidebar">
+      <div class="brand">
+        <div class="logo-mark">PT</div>
+        <div><div class="brand-name">PropTrack</div><div class="brand-sub">Property Manager</div></div>
+      </div>
+      <div class="nav-section-label" style="margin-top:0;">Company</div>
+      <a class="company-link" href="https://blueharborenterprisellc.com/" target="_blank" rel="noopener noreferrer"><span style="display:flex;align-items:center;gap:9px;" id="companyIconLabel">Blue Harbor Enterprise</span></a>
+
+      <div id="navContainer"></div>
+
+      <div class="sidebar-footer">
+        <div class="remind-link" id="remindLink">Send Reminders</div>
+        <div class="user-chip">
+          <div class="avatar-circle" id="sbAvatar"></div>
+          <div><div class="user-chip-name" id="sbName"></div><div class="user-chip-role" id="sbRole"></div></div>
+        </div>
+        <button class="logout-btn" onclick="logout()" id="logoutBtn">Sign out</button>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="page" id="page-dashboard"></div>
+      <div class="page" id="page-properties"></div>
+      <div class="page" id="page-tenants"></div>
+      <div class="page" id="page-leases"></div>
+      <div class="page" id="page-rent"></div>
+      <div class="page" id="page-expenses"></div>
+      <div class="page" id="page-time"></div>
+      <div class="page" id="page-reports"></div>
+      <div class="page" id="page-workorders"></div>
+      <div class="page" id="page-vendors"></div>
+      <div class="page" id="page-settings"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODALS ===================== -->
+<div class="modal-overlay" id="propModal"><div class="modal-box">
+  <h3 class="modal-title" id="propModalTitle">Add Property</h3>
+  <input type="hidden" id="propEditId">
+  <div class="field" style="margin-bottom:12px;"><label>Unit / Property Name</label><input type="text" id="propName" placeholder="e.g. 139B"></div>
+  <div class="field" style="margin-bottom:12px;"><label>Type</label><select id="propType"><option value="single family">Single Family</option><option value="multi family">Multi Family</option></select></div>
+  <div class="field"><label>Address</label><input type="text" id="propAddress" placeholder="Street, City, State"></div>
+  <div class="modal-actions"><button class="btn-outline" onclick="closeModal('propModal')">Cancel</button><button class="btn-primary" onclick="saveProperty()">Save</button></div>
+</div></div>
+
+<div class="modal-overlay" id="tenantModal"><div class="modal-box">
+  <h3 class="modal-title" id="tenantModalTitle">Add Tenant</h3>
+  <input type="hidden" id="tenantEditId">
+  <div class="field" style="margin-bottom:12px;"><label>Name</label><input type="text" id="tenantName"></div>
+  <div class="field" style="margin-bottom:12px;"><label>Email</label><input type="email" id="tenantEmail"></div>
+  <div class="field"><label>Phone</label><input type="text" id="tenantPhone"></div>
+  <div class="modal-actions"><button class="btn-outline" onclick="closeModal('tenantModal')">Cancel</button><button class="btn-primary" onclick="saveTenant()">Save</button></div>
+</div></div>
+
+<div class="modal-overlay" id="leaseModal"><div class="modal-box">
+  <h3 class="modal-title">New Lease</h3>
+  <input type="hidden" id="leaseEditId">
+  <div class="form-grid">
+    <div class="field"><label>Tenant</label><select id="leaseTenant"></select></div>
+    <div class="field"><label>Unit</label><input type="text" id="leaseUnit" placeholder="Unit #1"></div>
+    <div class="field"><label>Start Date</label><input type="date" id="leaseStart"></div>
+    <div class="field"><label>End Date</label><input type="date" id="leaseEnd"></div>
+    <div class="field"><label>Rent / Month</label><input type="number" id="leaseRent" step="0.01"></div>
+    <div class="field"><label>HAP Amount (optional)</label><input type="number" id="leaseHap" step="0.01" placeholder="0.00"></div>
+  </div>
+  <div class="modal-actions"><button class="btn-outline" onclick="closeModal('leaseModal')">Cancel</button><button class="btn-primary" onclick="saveLease()">Save Lease</button></div>
+</div></div>
+
+<div class="modal-overlay" id="paymentModal"><div class="modal-box">
+  <h3 class="modal-title">Log Payment</h3>
+  <div class="form-grid">
+    <div class="field" style="grid-column:1/-1;"><label>Lease</label><select id="payLease"></select></div>
+    <div class="field"><label>Paid Date</label><input type="date" id="payDate"></div>
+    <div class="field"><label>Amount Paid</label><input type="number" id="payAmount" step="0.01"></div>
+    <div class="field"><label>Method</label><select id="payMethod"><option>Cash</option><option>Bank Transfer / ACH</option><option>Credit Card</option><option>Check</option></select></div>
+    <div class="field"><label>Receipt #</label><input type="text" id="payReceipt" placeholder="REC-2026-01"></div>
+  </div>
+  <div class="modal-actions"><button class="btn-outline" onclick="closeModal('paymentModal')">Cancel</button><button class="btn-primary" onclick="savePayment()">Save Payment</button></div>
+</div></div>
+
+<div class="modal-overlay" id="expenseModal"><div class="modal-box">
+  <h3 class="modal-title">Add Expense</h3>
+  <div class="form-grid">
+    <div class="field"><label>Date</label><input type="date" id="expDate"></div>
+    <div class="field"><label>Amount</label><input type="number" id="expAmount" step="0.01"></div>
+    <div class="field"><label>Property</label><select id="expProperty"><option value="No property">No property</option></select></div>
+    <div class="field"><label>Category</label>
+      <select id="expCategory"><option>Mortgage</option><option>Insurance</option><option>Taxes</option><option>Utilities</option><option>Repairs</option><option>Maintenance</option><option>Management Fees</option><option>Advertising</option><option>Supplies</option><option>Legal</option><option>Accounting</option><option>Landscaping</option><option>Pest Control</option><option>Cleaning</option><option selected>Other</option></select>
+    </div>
+    <div class="field" style="grid-column:1/-1;"><label>Description</label><input type="text" id="expDesc"></div>
+    <div class="field"><label>Vendor</label><input type="text" id="expVendor"></div>
+    <div class="field"><label>Method</label><select id="expMethod"><option>Cash</option><option>Credit Card</option><option>Bank Transfer</option><option>EFT</option></select></div>
+  </div>
+  <div class="modal-actions"><button class="btn-outline" onclick="closeModal('expenseModal')">Cancel</button><button class="btn-primary" onclick="saveExpense()">Save Expense</button></div>
+</div></div>
+
+<div class="modal-overlay" id="logModal"><div class="modal-box">
+  <h3 class="modal-title" id="logModalTitle">Log Day</h3>
+  <div class="field" style="margin-bottom:12px;"><label>Entry Type</label>
+    <select id="logType"><option value="Work">Work</option><option value="Vacation">Vacation</option><option value="Sick">Sick</option><option value="Holiday">Holiday</option><option value="Day Off">Day Off</option></select>
+  </div>
+  <div class="field" id="logHoursField"><label>Hours</label><input type="number" step="0.25" id="logHours" placeholder="8"></div>
+  <div class="modal-actions"><button class="btn-outline" onclick="closeModal('logModal')">Cancel</button><button class="btn-primary" onclick="saveDayLog()">Save</button></div>
+</div></div>
+
+<div class="modal-overlay" id="workerModal"><div class="modal-box">
+  <h3 class="modal-title">Add Worker</h3>
+  <div class="field" style="margin-bottom:12px;"><label>Name</label><input type="text" id="newWorkerName"></div>
+  <div class="field" style="margin-bottom:12px;"><label>Role</label><input type="text" id="newWorkerRole" placeholder="e.g. Laborer, Maintenance"></div>
+  <div class="form-grid">
+    <div class="field"><label>Pay Type</label><select id="newWorkerPayType"><option value="hourly">Hourly</option><option value="weekly">Weekly Flat</option></select></div>
+    <div class="field"><label>Rate</label><input type="number" step="0.01" id="newWorkerRate"></div>
+  </div>
+  <div class="modal-actions"><button class="btn-outline" onclick="closeModal('workerModal')">Cancel</button><button class="btn-primary" onclick="saveNewWorker()">Add Worker</button></div>
+</div></div>
+
+<div class="modal-overlay" id="woModal"><div class="modal-box">
+  <h3 class="modal-title">New Work Order</h3>
+  <div class="field" style="margin-bottom:12px;"><label>Property</label><select id="woProperty"></select></div>
+  <div class="field" style="margin-bottom:12px;"><label>Issue</label><input type="text" id="woIssue" placeholder="e.g. Leaking faucet"></div>
+  <div class="form-grid">
+    <div class="field"><label>Priority</label><select id="woPriority"><option>Low</option><option>Medium</option><option>High</option></select></div>
+    <div class="field"><label>Status</label><select id="woStatus"><option>Open</option><option>Assigned</option><option>In Progress</option><option>Completed</option></select></div>
+  </div>
+  <div class="modal-actions"><button class="btn-outline" onclick="closeModal('woModal')">Cancel</button><button class="btn-primary" onclick="saveWorkOrder()">Create</button></div>
+</div></div>
+
+<div class="modal-overlay" id="vendorModal"><div class="modal-box">
+  <h3 class="modal-title">Add Vendor</h3>
+  <div class="field" style="margin-bottom:12px;"><label>Name</label><input type="text" id="vendorName"></div>
+  <div class="field" style="margin-bottom:12px;"><label>Service Type</label><input type="text" id="vendorService" placeholder="e.g. Plumbing"></div>
+  <div class="field"><label>Phone</label><input type="text" id="vendorPhone"></div>
+  <div class="modal-actions"><button class="btn-outline" onclick="closeModal('vendorModal')">Cancel</button><button class="btn-primary" onclick="saveVendor()">Save</button></div>
+</div></div>
+
+<div class="modal-overlay" id="userModal"><div class="modal-box">
+  <h3 class="modal-title">Add Team Member</h3>
+  <div class="field" style="margin-bottom:12px;"><label>Name</label><input type="text" id="newUserName"></div>
+  <div class="field" style="margin-bottom:10px;"><label>Role</label>
+    <select id="newUserRole" onchange="updateRoleDesc()"><option value="manager">Property Manager</option><option value="maintenance">Maintenance</option><option value="owner">Owner</option><option value="custom">Custom...</option></select>
+  </div>
+  <div id="roleDescBox" style="background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:11px 13px;font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:14px;"></div>
+  <div id="customRoleFields" style="display:none;">
+    <div class="field" style="margin-bottom:12px;"><label>Custom Role Title</label><input type="text" id="customRoleLabel" placeholder="e.g. Bookkeeper, Regional Manager"></div>
+    <div class="field" style="margin-bottom:14px;">
+      <label>Pages this person can access</label>
+      <div class="perm-check-list" id="customPermList"></div>
+    </div>
+  </div>
+  <div class="field"><label>PIN (4+ digits)</label><input type="text" id="newUserPin" placeholder="e.g. 4471"></div>
+  <div style="font-size:11.5px;color:var(--muted);margin-top:6px;">This is what they'll type at login after picking their name. Share it with them directly — they won't need an email address.</div>
+  <div class="modal-actions"><button class="btn-outline" onclick="closeModal('userModal')">Cancel</button><button class="btn-primary" onclick="saveNewUser()">Add User</button></div>
+</div></div>
+
+<script>
+/* ============================================================ ICONS ============================================================ */
+const ICON_PATHS = {
+  home:'<path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/>',
+  building:'<rect x="5" y="3" width="14" height="18" rx="1"/><path d="M9 8h1M9 12h1M9 16h1M14 8h1M14 12h1M14 16h1"/>',
+  users:'<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><path d="M16 8.2a3 3 0 1 1 .5 6"/><path d="M15.5 14c2.6.3 4.5 2.1 4.5 5"/>',
+  file:'<path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M14 3v4h4"/><path d="M9 13h6M9 17h6"/>',
+  dollar:'<path d="M12 2v20"/><path d="M17 6.5H9.8a3 3 0 0 0 0 6h4.4a3 3 0 0 1 0 6H7"/>',
+  box:'<path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
+  chart:'<path d="M5 21V10"/><path d="M12 21V4"/><path d="M19 21v-7"/><path d="M3 21h18"/>',
+  wrench:'<path d="M14.5 6.5a3.8 3.8 0 0 0 5 5l-6 6-3-3-6 6L3 19l6-6-3-3 6-6a3.8 3.8 0 0 0 5 5l.5-.5-2-2 .5-.5 2 2Z"/>',
+  clipboard:'<rect x="6" y="4" width="12" height="17" rx="1.5"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 11h6M9 15h6"/>',
+  bell:'<path d="M6.5 9a5.5 5.5 0 0 1 11 0c0 6.5 2.5 8 2.5 8H4s2.5-1.5 2.5-8Z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>',
+  settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.36.5 1 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  edit:'<path d="M11 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6"/><path d="M18.4 3.6a2 2 0 0 1 2.8 2.8L11 16.6l-4 1 1-4 10.4-10.4Z"/>',
+  trash:'<path d="M4 7h16"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/>',
+  check:'<path d="M5 12.5 10 17 19 7"/>',
+  alert:'<path d="M10.6 4.1 2.6 18a1.9 1.9 0 0 0 1.6 2.9h15.6a1.9 1.9 0 0 0 1.6-2.9l-8-13.9a1.9 1.9 0 0 0-3.2 0Z"/><path d="M12 9.5v4M12 17h.01"/>',
+  search:'<circle cx="11" cy="11" r="7.5"/><path d="M21 21l-4.3-4.3"/>',
+  printer:'<path d="M6.5 9V3h11v6"/><path d="M6 17.5H4.5a1.5 1.5 0 0 1-1.5-1.5v-4.5A1.5 1.5 0 0 1 4.5 10h15a1.5 1.5 0 0 1 1.5 1.5V16a1.5 1.5 0 0 1-1.5 1.5H18"/><rect x="6" y="14" width="12" height="7"/>',
+  download:'<path d="M20 15v3.5A1.5 1.5 0 0 1 18.5 20h-13A1.5 1.5 0 0 1 4 18.5V15"/><path d="M7.5 10.5 12 15l4.5-4.5"/><path d="M12 15V3"/>',
+  chevLeft:'<path d="M15 5 8 12l7 7"/>',
+  chevRight:'<path d="M9 5l7 7-7 7"/>',
+  extLink:'<path d="M17 13.5V18a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 5 18V9a1.5 1.5 0 0 1 1.5-1.5H11"/><path d="M14 4h6v6"/><path d="M10 14 20 4"/>',
+  lock:'<rect x="4" y="10.5" width="16" height="10" rx="1.5"/><path d="M7.5 10.5V7a4.5 4.5 0 0 1 9 0v3.5"/>',
+  pin:'<path d="M19 10c0 6-7 11-7 11s-7-5-7-11a7 7 0 0 1 14 0Z"/><circle cx="12" cy="10" r="2.5"/>',
+  logout:'<path d="M8.5 20H5.5A1.5 1.5 0 0 1 4 18.5v-13A1.5 1.5 0 0 1 5.5 4h3"/><path d="M14.5 16 19 11.5 14.5 7"/><path d="M19 11.5H8.5"/>',
+  arrowUp:'<path d="M12 19V5"/><path d="M6 11l6-6 6 6"/>',
+  arrowDown:'<path d="M12 5v14"/><path d="M18 13l-6 6-6-6"/>',
+};
+function icon(name, size, cls){
+  size = size || 18;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" class="${cls||''}" style="vertical-align:middle;flex-shrink:0;">${ICON_PATHS[name]||''}</svg>`;
+}
+
+/* ============================================================ STATE ============================================================ */
+let DB = null;
+let currentUser = null;
+let pendingUser = null;
+let currentPage = 'dashboard';
+let selectedWorkerId = null;
+let weekOffset = 0;
+let logModalCtx = null;
+let rentMonth = new Date().getMonth();
+let rentYear = new Date().getFullYear();
+let dashCharts = {};
+let leaseFilter = 'All';
+let rentFilter = 'All';
+let expenseFilter = 'All';
+let woFilter = 'All';
+let reportTab = 'owner';
+
+const STORAGE_KEY = 'proptrack-data-v2';
+const ROLE_LABELS = {owner:'Owner', manager:'Property Manager', maintenance:'Maintenance'};
+const ROLE_DESCRIPTIONS = {
+  owner:'Full access to every page, including Settings. Can add, edit, or remove team members and change anyone\'s PIN. Only give this role to whoever should have final say over the whole account.',
+  manager:'Full access to Properties, Tenants, Leases, Rent Collection, Expenses, Time Cards, Reports, Work Orders, and Vendors. Cannot open Settings or manage other users\' access.',
+  maintenance:'Sees a simplified dashboard, Time Cards, Work Orders, and Vendors only. No visibility into tenant contact info, leases, rent, or expenses — good for crew who just need to log hours and jobs.',
+  custom:'Build a role from scratch — give this person exactly the pages they need, no more.',
+};
+// Pages a custom role can be granted. Settings is intentionally excluded — anyone who needs
+// to manage other users' access should be made an Owner instead.
+const CUSTOM_PERM_PAGES = NAV_ITEMS_FOR_CUSTOM();
+function NAV_ITEMS_FOR_CUSTOM(){
+  return [
+    {id:'dashboard', label:'Dashboard'},
+    {id:'properties', label:'Properties'},
+    {id:'tenants', label:'Tenants'},
+    {id:'leases', label:'Leases'},
+    {id:'rent', label:'Rent Collection'},
+    {id:'expenses', label:'Expenses'},
+    {id:'time', label:'Time Cards'},
+    {id:'reports', label:'Reports'},
+    {id:'workorders', label:'Work Orders'},
+    {id:'vendors', label:'Vendors'},
+  ];
+}
+function roleLabel(user){ return user.role==='custom' ? (user.customLabel || 'Custom') : ROLE_LABELS[user.role]; }
+function roleDescription(user){
+  if(user.role==='custom'){
+    const pages = (user.pages||[]).map(id=>{ const p = CUSTOM_PERM_PAGES.find(p=>p.id===id); return p?p.label:id; });
+    return pages.length ? `Custom access to: ${pages.join(', ')}.` : 'Custom role with no pages granted yet.';
+  }
+  return ROLE_DESCRIPTIONS[user.role];
+}
+function userHasAccess(user, pageId){
+  if(user.role==='custom') return (user.pages||[]).includes(pageId);
+  const item = NAV_ITEMS.find(n=>n.id===pageId);
+  return item ? item.roles.includes(user.role) : false;
+}
+
+const NAV_ITEMS = [
+  {id:'dashboard', label:'Dashboard', icon:'home', roles:['owner','manager','maintenance']},
+  {id:'properties', label:'Properties', icon:'building', roles:['owner','manager']},
+  {id:'tenants', label:'Tenants', icon:'users', roles:['owner','manager']},
+  {id:'leases', label:'Leases', icon:'file', roles:['owner','manager']},
+  {id:'rent', label:'Rent Collection', icon:'dollar', roles:['owner','manager']},
+  {id:'expenses', label:'Expenses', icon:'box', roles:['owner','manager']},
+  {id:'time', label:'Time Cards', icon:'clock', roles:['owner','manager','maintenance']},
+  {id:'reports', label:'Reports', icon:'chart', roles:['owner','manager']},
+  {id:'workorders', label:'Work Orders', icon:'wrench', roles:['owner','manager','maintenance']},
+  {id:'vendors', label:'Vendors', icon:'clipboard', roles:['owner','manager','maintenance']},
+  {id:'settings', label:'Settings', icon:'settings', roles:['owner']},
+];
+
+/* ============================================================ SEED DATA ============================================================ */
+function seedData(){
+  const properties = [
+    {id:'p1', name:'7004', type:'single family', address:'7004, Upper Marlboro, MD'},
+    {id:'p2', name:'8701', type:'multi family', address:'8701 Ritchboro Rd, District Heights, MD'},
+    {id:'p3', name:'139B', type:'multi family', address:'139B Chalan Apaca, Chalan Pago, GU'},
+    {id:'p4', name:'139A', type:'multi family', address:'139A Chalan Apaca, Chalan Pago, GU'},
+    {id:'p5', name:'161B', type:'multi family', address:'161B Chalan Apaca, Chalan Pago, GU'},
+    {id:'p6', name:'161A', type:'multi family', address:'161A Chalan Apaca, Chalan Pago'},
+  ];
+  const tenants = [
+    {id:'te1', name:'Samuel Barksdale', email:'samuel.barksdale97@gmail.com', phone:'240-565-3115'},
+    {id:'te2', name:'Rex Carbon', email:'', phone:'6714885554'},
+    {id:'te3', name:'Kaylani Cruz', email:'', phone:'6717873292'},
+    {id:'te4', name:'Janel Viray', email:'janel.viray@gmail.com', phone:'240-2055122'},
+  ];
+  const leases = [
+    {id:'l1', tenantId:'te3', unit:'Unit #2', propertyId:'p5', start:'2026-05-01', end:'2027-04-30', rent:1396.00, hap:803.00, tenantShare:593.00, voucher:'HAP-2026-Cruz', status:'Active'},
+    {id:'l2', tenantId:'te2', unit:'Unit #1', propertyId:'p6', start:'2026-03-01', end:'2027-02-28', rent:1700.00, hap:0, tenantShare:0, voucher:'', status:'Active'},
+  ];
+  const rentCharges = [
+    {id:'r1', leaseId:'l1', dueDate:'2026-07-01', amountDue:1397.00, paid:593.00, paidDate:'2026-06-25', method:'Bank Transfer / ACH', receipt:'GU-2026-07', lateFee:0, status:'Partial'},
+    {id:'r2', leaseId:'l2', dueDate:'2026-07-01', amountDue:1700.00, paid:1700.00, paidDate:'2026-07-10', method:'Cash', receipt:'REC-2026-07', lateFee:0, status:'Paid'},
+  ];
+  const expenses = [
+    {id:'e1', date:'2026-06-27', property:'No property', category:'Other', desc:'L4 - Pete (Laborer, Maintenance)', vendor:'L4 - Pete', amount:382.50, method:'Cash'},
+    {id:'e2', date:'2026-06-13', property:'139B', category:'Other', desc:'L2 - Bill (Laborer, Maintenance)', vendor:'L2 - Bill', amount:322.50, method:'Bank Transfer'},
+    {id:'e3', date:'2026-06-06', property:'139B', category:'Other', desc:'L2 - Bill (Laborer, Maintenance)', vendor:'L2 - Bill', amount:322.50, method:'Bank Transfer'},
+    {id:'e4', date:'2026-06-06', property:'139B', category:'Other', desc:'L4 - Pete (Laborer, Maintenance)', vendor:'L4 - Pete', amount:486.86, method:'Cash'},
+    {id:'e5', date:'2026-05-30', property:'139B', category:'Utilities', desc:'Power Bill for April and May', vendor:'Guam Power Authority', amount:53.24, method:'Credit Card'},
+    {id:'e6', date:'2026-05-30', property:'139B', category:'Other', desc:'L4 - Pete (Laborer, Maintenance)', vendor:'L4 - Pete', amount:498.47, method:'Cash'},
+    {id:'e7', date:'2026-05-30', property:'139B', category:'Other', desc:'L2 - Bill (Laborer, Maintenance)', vendor:'L2 - Bill', amount:390.00, method:'Cash'},
+    {id:'e8', date:'2026-05-24', property:'139B', category:'Other', desc:'Water Bill', vendor:'Guam Water Authority', amount:76.77, method:'Credit Card'},
+    {id:'e9', date:'2026-05-24', property:'139B', category:'Utilities', desc:'April and May 2026 power', vendor:'Guam Water Authority', amount:76.77, method:'Credit Card'},
+    {id:'e10', date:'2026-05-09', property:'No property', category:'Other', desc:'C3 - Rosanna (Caregiver)', vendor:'C3 - Rosanna', amount:500.00, method:'EFT'},
+    {id:'e11', date:'2026-05-01', property:'7004', category:'Mortgage', desc:'Chase Mortgage', vendor:'Chase', amount:2260.00, method:'Bank Transfer'},
+  ];
+  const workers = [
+    {id:'w1', name:'C1 - Addie', roleLabel:'Caregiver, Financial, Legal, Medical Guardian', payType:'weekly', rate:0},
+    {id:'w2', name:'C2 - Tiana', roleLabel:'Caregiver, cook', payType:'hourly', rate:12.50},
+    {id:'w3', name:'C3 - Rosanna', roleLabel:'Caregiver', payType:'weekly', rate:500.00},
+    {id:'w4', name:'L2 - Bill', roleLabel:'Laborer, Maintenance, Landscaper', payType:'hourly', rate:15.00},
+    {id:'w5', name:'L4 - Pete', roleLabel:'Laborer, Maintenance, Landscaper, Carpenter', payType:'hourly', rate:15.00},
+  ];
+  return { properties, tenants, leases, rentCharges, expenses, workers, timeEntries:{}, workOrders:[], vendors:[] };
+}
+
+/* ============================================================ STORAGE ============================================================ */
+async function loadDB(){
+  try{
+    const { data, error } = await supabase.from('app_data').select('data').eq('app', APP_NAME).single();
+    if(error) throw error;
+    DB = (data && data.data && Object.keys(data.data).length) ? data.data : seedData();
+    if(!data || !data.data || !Object.keys(data.data).length) await persist();
+  }catch(e){
+    console.error('Load failed, using seed data', e);
+    DB = seedData();
+  }
+}
+let saveTimeout=null;
+async function persist(){
+  try{
+    await supabase.from('app_data').update({data: DB, updated_at: new Date().toISOString()}).eq('app', APP_NAME);
+  }catch(e){ console.error('save failed', e); }
+}
+function scheduleSave(){ clearTimeout(saveTimeout); saveTimeout = setTimeout(persist, 250); }
+
+/* ============================================================ HELPERS ============================================================ */
+function fmt(n){ return '$' + Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2}); }
+function fmtShort(n){ return '$' + Number(n||0).toLocaleString(undefined,{maximumFractionDigits:0}); }
+function niceDate(dstr){ if(!dstr) return '—'; const d = new Date(dstr+'T00:00:00'); return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); }
+function propertyName(id){ const p = DB.properties.find(p=>p.id===id); return p ? p.name : '—'; }
+function tenantName(id){ const t = DB.tenants.find(t=>t.id===id); return t ? t.name : '—'; }
+function leaseById(id){ return DB.leases.find(l=>l.id===id); }
+function initials(name){ return name.split(/[\s-]+/).filter(Boolean).map(p=>p[0]).slice(0,2).join('').toUpperCase(); }
+
+/* ============================================================ LOGIN (PIN, backed by real Supabase Auth) ============================================================ */
+let pendingProfile = null;
+
+async function renderLogin(){
+  const { data: rows, error } = await supabase.from('login_directory').select('*').eq('app', APP_NAME).order('name');
+  const grid = document.getElementById('profileGrid');
+  if(error || !rows){ grid.innerHTML = `<div style="color:#ff9b9b;font-size:13px;">Could not load profiles.</div>`; return; }
+  grid.innerHTML = rows.map(u => `
+    <div class="profile-card" id="prof-${u.id}" onclick="choosePinFor('${u.id}','${u.name.replace(/'/g,"\\'")}')">
+      <div class="avatar-circle">${initials(u.name)}</div>
+      <div class="profile-name">${u.name}</div>
+      <div class="profile-role">${roleLabel(u.role==='custom' ? {role:'custom', customLabel:u.custom_label} : {role:u.role})}</div>
+    </div>
+  `).join('');
+}
+function choosePinFor(id, name){
+  pendingProfile = { id, name };
+  document.querySelectorAll('.profile-card').forEach(c=>c.classList.remove('active'));
+  document.getElementById('prof-'+id).classList.add('active');
+  document.getElementById('pinArea').classList.add('show');
+  document.getElementById('pinUserName').textContent = name;
+  document.getElementById('loginError').style.display='none';
+  const inp = document.getElementById('pinInput'); inp.value=''; inp.focus();
+}
+async function attemptLogin(){
+  const pin = document.getElementById('pinInput').value.trim();
+  const errEl = document.getElementById('loginError');
+  errEl.style.display='none';
+  if(!pendingProfile) return;
+  if(!pin){ errEl.textContent='Enter your PIN.'; errEl.style.display='block'; return; }
+  const res = await fetch('/api/pin-login', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ app: APP_NAME, profileId: pendingProfile.id, pin })
+  });
+  const result = await res.json();
+  if(!res.ok){ errEl.textContent = result.error || 'Incorrect PIN.'; errEl.style.display='block'; return; }
+  const { data, error } = await supabase.auth.setSession({ access_token: result.access_token, refresh_token: result.refresh_token });
+  if(error || !data.user){ errEl.textContent = 'Sign-in failed. Try again.'; errEl.style.display='block'; return; }
+  await afterLogin(data.user);
+}
+document.addEventListener('keydown', e=>{
+  if(e.key==='Enter' && document.getElementById('pinArea').classList.contains('show')) attemptLogin();
+});
+async function afterLogin(authUser){
+  const { data: profile, error } = await supabase.from('profiles').select('*').eq('user_id', authUser.id).eq('app', APP_NAME).single();
+  if(error || !profile){
+    document.getElementById('loginError').textContent = 'Your account has no access to PropTrack yet. Ask your Owner to add you in Settings.';
+    document.getElementById('loginError').style.display='block';
+    await supabase.auth.signOut();
+    return;
+  }
+  currentUser = {
+    id: profile.id, authUserId: authUser.id, name: profile.name, role: profile.role,
+    customLabel: profile.custom_label, pages: profile.pages || [], email: authUser.email,
+  };
+  document.getElementById('loginView').style.display='none';
+  document.getElementById('appView').style.display='block';
+  await initAppForUser();
+}
+async function logout(){ await supabase.auth.signOut(); currentUser=null; location.reload(); }
+async function checkExistingSession(){
+  const { data: { session } } = await supabase.auth.getSession();
+  if(session && session.user){ await afterLogin(session.user); }
+  else { await renderLogin(); }
+}
+
+/* ============================================================ APP INIT / NAV ============================================================ */
+async function initAppForUser(){
+  await loadDB();
+  document.getElementById('sbAvatar').textContent = initials(currentUser.name);
+  document.getElementById('sbName').textContent = currentUser.name;
+  document.getElementById('sbRole').textContent = roleLabel(currentUser);
+  document.getElementById('companyIconLabel').innerHTML = icon('building',15) + ' Blue Harbor Enterprise ' + icon('extLink',13);
+  document.getElementById('remindLink').innerHTML = icon('bell',16) + ' Send Reminders';
+  document.getElementById('logoutBtn').innerHTML = icon('logout',14) + ' Sign out';
+  renderNav();
+  const firstPage = NAV_ITEMS.find(n=> n.id==='settings' ? currentUser.role==='owner' : userHasAccess(currentUser, n.id));
+  goto(firstPage ? firstPage.id : 'dashboard');
+}
+function renderNav(){
+  const c = document.getElementById('navContainer');
+  const items = NAV_ITEMS.filter(n=>n.id==='settings' ? currentUser.role==='owner' : userHasAccess(currentUser, n.id));
+  const sections = [
+    {label:'Overview', ids:['dashboard']},
+    {label:'Portfolio', ids:['properties','tenants','leases']},
+    {label:'Finance', ids:['rent','expenses','time','reports']},
+    {label:'Maintenance', ids:['workorders','vendors']},
+    {label:'Admin', ids:['settings']},
+  ];
+  c.innerHTML = sections.map(s=>{
+    const its = items.filter(i=>s.ids.includes(i.id));
+    if(!its.length) return '';
+    return `<div class="nav-section-label">${s.label}</div>` + its.map(n=>`
+      <button class="nav-item" id="nav-${n.id}" onclick="goto('${n.id}')"><span class="nav-icon">${icon(n.icon,17)}</span> ${n.label}</button>
+    `).join('');
+  }).join('');
+}
+function goto(pageId){
+  currentPage = pageId;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+pageId).classList.add('active');
+  const nb = document.getElementById('nav-'+pageId); if(nb) nb.classList.add('active');
+  const renderers = {dashboard:renderDashboard, properties:renderProperties, tenants:renderTenants, leases:renderLeases,
+    rent:renderRent, expenses:renderExpenses, time:renderTimePage, reports:renderReports, workorders:renderWorkOrders, vendors:renderVendors, settings:renderSettings};
+  if(renderers[pageId]) renderers[pageId]();
+}
+
+/* ============================================================ DASHBOARD ============================================================ */
+function computeYearTotals(year){
+  const income = new Array(12).fill(0), expense = new Array(12).fill(0);
+  DB.rentCharges.forEach(r=>{ const [y,m]=r.dueDate.split('-'); if(Number(y)===year) income[Number(m)-1]+=r.paid; });
+  DB.expenses.forEach(e=>{ const [y,m]=e.date.split('-'); if(Number(y)===year) expense[Number(m)-1]+=e.amount; });
+  return {income, expense};
+}
+function statusPill(status){
+  const map = {Paid:'pill-green', Partial:'pill-amber', Overdue:'pill-red', Pending:'pill-navy', Waived:'pill-navy'};
+  return `<span class="pill ${map[status]||'pill-navy'}">${status}</span>`;
+}
+function renderDashboard(){
+  const showSimplified = currentUser.role==='maintenance' ||
+    (currentUser.role==='custom' && !userHasAccess(currentUser,'rent') && !userHasAccess(currentUser,'expenses') && !userHasAccess(currentUser,'tenants'));
+  if(showSimplified){ renderMaintenanceDashboard(); return; }
+  const year = new Date().getFullYear();
+  const totalUnits = DB.properties.length;
+  const activeTenants = DB.tenants.length;
+  const activeLeases = DB.leases.filter(l=>l.status==='Active').length;
+  const vacantUnits = Math.max(totalUnits - activeLeases, 0);
+  const overdueRent = DB.rentCharges.filter(r=>r.status==='Overdue').length;
+  const openWO = DB.workOrders.filter(w=>w.status!=='Completed' && w.status!=='Cancelled').length;
+  const {income, expense} = computeYearTotals(year);
+  const totalIncome = income.reduce((a,b)=>a+b,0);
+  const totalExpense = expense.reduce((a,b)=>a+b,0);
+  const netIncome = totalIncome - totalExpense;
+  const overdue = DB.rentCharges.filter(r=>r.status==='Partial' || r.status==='Overdue');
+
+  document.getElementById('page-dashboard').innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">Dashboard</h1><p class="page-sub">Overview of your property portfolio — ${new Date().toLocaleDateString(undefined,{month:'long', year:'numeric'})}</p></div></div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-label">Properties</div><div class="stat-row"><div class="stat-value">${DB.properties.length}</div><div class="stat-icon" style="background:#e6ecf7;color:var(--navy-800);">${icon('building',18)}</div></div></div>
+      <div class="stat-card"><div class="stat-label">Total Units</div><div class="stat-row"><div class="stat-value">${totalUnits}</div><div class="stat-icon" style="background:#e6ecf7;color:var(--navy-800);">${icon('home',18)}</div></div></div>
+      <div class="stat-card"><div class="stat-label">Active Tenants</div><div class="stat-row"><div class="stat-value">${activeTenants}</div><div class="stat-icon" style="background:#e4f5eb;color:var(--green);">${icon('users',18)}</div></div></div>
+      <div class="stat-card"><div class="stat-label">Active Leases</div><div class="stat-row"><div class="stat-value">${activeLeases}</div><div class="stat-icon" style="background:#e6ecf7;color:var(--navy-800);">${icon('file',18)}</div></div></div>
+      <div class="stat-card"><div class="stat-label">Vacant Units</div><div class="stat-row"><div class="stat-value">${vacantUnits}</div><div class="stat-icon" style="background:#fbf0da;color:var(--amber);">${icon('home',18)}</div></div></div>
+      <div class="stat-card"><div class="stat-label">Overdue Rent</div><div class="stat-row"><div class="stat-value">${overdueRent}</div><div class="stat-icon" style="background:#faeaea;color:var(--red);">${icon('alert',18)}</div></div></div>
+      <div class="stat-card"><div class="stat-label">Open Work Orders</div><div class="stat-row"><div class="stat-value">${openWO}</div><div class="stat-icon" style="background:#fbf0da;color:var(--amber);">${icon('wrench',18)}</div></div></div>
+      <div class="stat-card"><div class="stat-label">${year} Net Income</div><div class="stat-row"><div class="stat-value" style="color:${netIncome>=0?'var(--green)':'var(--red)'};">${fmtShort(netIncome)}</div><div class="stat-icon" style="background:#e4f5eb;color:var(--green);">${icon('dollar',18)}</div></div></div>
+    </div>
+    <div class="grid-2">
+      <div>
+        <div class="card">
+          <div class="card-title">${year} Income vs Expenses</div>
+          <canvas id="dashLineChart" height="130"></canvas>
+          <div style="display:flex;gap:40px;margin-top:16px;flex-wrap:wrap;">
+            <div><div style="color:var(--muted);font-size:11px;text-transform:uppercase;">Total Income</div><div style="font-size:17px;font-weight:700;color:var(--green);">${fmt(totalIncome)}</div></div>
+            <div><div style="color:var(--muted);font-size:11px;text-transform:uppercase;">Total Expenses</div><div style="font-size:17px;font-weight:700;color:var(--red);">${fmt(totalExpense)}</div></div>
+            <div><div style="color:var(--muted);font-size:11px;text-transform:uppercase;">Net Income</div><div style="font-size:17px;font-weight:700;">${fmt(netIncome)}</div></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card"><div class="card-title">Upcoming Renewals <span class="link-gold" onclick="goto('leases')">View all ${icon('chevRight',12)}</span></div><div style="color:var(--muted);font-size:13px;">No renewals in the next 60 days</div></div>
+        <div class="card"><div class="card-title">Overdue Rent <span class="link-gold" onclick="goto('rent')">View all ${icon('chevRight',12)}</span></div>
+          ${overdue.length ? overdue.map(r=>{ const lease = leaseById(r.leaseId); return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--border);"><div><b>${tenantName(lease.tenantId)}</b><div style="color:var(--muted);font-size:11.5px;">Due ${niceDate(r.dueDate)}</div></div><div style="text-align:right;"><div class="amount-neg">${fmt(r.amountDue)}</div>${statusPill(r.status)}</div></div>`; }).join('') : `<div style="color:var(--muted);font-size:13px;">No overdue rent</div>`}
+        </div>
+      </div>
+    </div>
+  `;
+  const ctx = document.getElementById('dashLineChart');
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  if(dashCharts.line) dashCharts.line.destroy();
+  dashCharts.line = new Chart(ctx, { type:'line', data:{ labels:months, datasets:[
+    {label:'Income', data:income, borderColor:'#0f1e3a', backgroundColor:'rgba(15,30,58,.08)', tension:.4, fill:true, pointRadius:3},
+    {label:'Expenses', data:expense, borderColor:'#c9a24a', backgroundColor:'rgba(201,162,74,.13)', tension:.4, fill:true, pointRadius:3},
+  ]}, options:{ plugins:{legend:{position:'bottom', labels:{boxWidth:10,font:{size:11}}}}, scales:{ y:{ticks:{callback:v=>'$'+v}} } }});
+}
+function renderMaintenanceDashboard(){
+  const workers = DB.workers;
+  const wk = getWeekDates(weekOffset);
+  let totalHoursThisWeek = 0;
+  workers.forEach(w=>{ wk.forEach(dstr=>{ const e = DB.timeEntries[w.id] && DB.timeEntries[w.id][dstr]; if(e && e.type==='Work') totalHoursThisWeek += Number(e.hours||0); }); });
+  const openWO = DB.workOrders.filter(w=>w.status!=='Completed' && w.status!=='Cancelled').length;
+  document.getElementById('page-dashboard').innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">Welcome back, ${currentUser.name.split(' ')[0]}</h1><p class="page-sub">Crew and maintenance overview.</p></div></div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-label">Crew Members</div><div class="stat-row"><div class="stat-value">${workers.length}</div><div class="stat-icon" style="background:#e6ecf7;color:var(--navy-800);">${icon('users',18)}</div></div></div>
+      <div class="stat-card"><div class="stat-label">Hours Logged (This Week)</div><div class="stat-row"><div class="stat-value">${totalHoursThisWeek}</div><div class="stat-icon" style="background:#e4f5eb;color:var(--green);">${icon('clock',18)}</div></div></div>
+      <div class="stat-card"><div class="stat-label">Open Work Orders</div><div class="stat-row"><div class="stat-value">${openWO}</div><div class="stat-icon" style="background:#fbf0da;color:var(--amber);">${icon('wrench',18)}</div></div></div>
+      <div class="stat-card"><div class="stat-label">Vendors on File</div><div class="stat-row"><div class="stat-value">${DB.vendors.length}</div><div class="stat-icon" style="background:#e6ecf7;color:var(--navy-800);">${icon('clipboard',18)}</div></div></div>
+    </div>
+    <div class="card"><div class="card-title">Your Crew</div>
+      <table><tr><th>Name</th><th>Role</th><th>Pay Type</th><th>Rate</th></tr>
+        ${workers.map(w=>`<tr><td><b>${w.name}</b></td><td>${w.roleLabel}</td><td>${w.payType}</td><td>${w.payType==='hourly'?fmt(w.rate)+'/hr':fmt(w.rate)+'/wk'}</td></tr>`).join('')}
+      </table>
+    </div>
+  `;
+}
+
+/* ============================================================ PROPERTIES ============================================================ */
+function renderProperties(){
+  document.getElementById('page-properties').innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">Properties</h1><p class="page-sub">Manage your rental properties and units</p></div>
+      <button class="btn-primary" onclick="openAddProperty()">${icon('plus',15)} Add Property</button></div>
+    <div id="propList"></div>
+  `;
+  const listEl = document.getElementById('propList');
+  listEl.innerHTML = DB.properties.length ? DB.properties.map(p=>`
+    <div class="list-row">
+      <div style="display:flex;gap:14px;align-items:center;">
+        <div class="list-avatar">${icon('building',19)}</div>
+        <div><div class="list-title">${p.name} <span class="pill pill-navy" style="margin-left:6px;">${p.type}</span></div><div class="list-sub">${icon('pin',12)} ${p.address}</div></div>
+      </div>
+      <div class="row-actions"><button class="icon-btn" onclick="openEditProperty('${p.id}')">${icon('edit',16)}</button><button class="icon-btn" onclick="deleteProperty('${p.id}')">${icon('trash',16)}</button></div>
+    </div>
+  `).join('') : `<div class="card"><div class="empty-state"><div class="icon-wrap">${icon('building',24)}</div>No properties yet.</div></div>`;
+}
+function openAddProperty(){
+  document.getElementById('propModalTitle').textContent='Add Property';
+  document.getElementById('propEditId').value='';
+  document.getElementById('propName').value=''; document.getElementById('propAddress').value=''; document.getElementById('propType').value='single family';
+  document.getElementById('propModal').classList.add('show');
+}
+function openEditProperty(id){
+  const p = DB.properties.find(p=>p.id===id);
+  document.getElementById('propModalTitle').textContent='Edit Property';
+  document.getElementById('propEditId').value=id;
+  document.getElementById('propName').value=p.name; document.getElementById('propAddress').value=p.address; document.getElementById('propType').value=p.type;
+  document.getElementById('propModal').classList.add('show');
+}
+function saveProperty(){
+  const id = document.getElementById('propEditId').value;
+  const name = document.getElementById('propName').value.trim();
+  const type = document.getElementById('propType').value;
+  const address = document.getElementById('propAddress').value.trim();
+  if(!name || !address){ alert('Enter a name and address.'); return; }
+  if(id){ const p = DB.properties.find(p=>p.id===id); p.name=name; p.type=type; p.address=address; }
+  else { DB.properties.push({id:'p'+Date.now(), name, type, address}); }
+  scheduleSave(); closeModal('propModal'); renderProperties();
+}
+function deleteProperty(id){ if(!confirm('Delete this property?')) return; DB.properties = DB.properties.filter(p=>p.id!==id); scheduleSave(); renderProperties(); }
+
+/* ============================================================ TENANTS ============================================================ */
+function renderTenants(){
+  document.getElementById('page-tenants').innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">Tenants</h1><p class="page-sub">Manage tenant profiles and payment ledgers</p></div>
+      <button class="btn-primary" onclick="openAddTenant()">${icon('plus',15)} Add Tenant</button></div>
+    <input class="search-input" id="tenantSearch" placeholder="Search tenants..." oninput="renderTenantTable()" style="margin-bottom:14px;">
+    <div class="card" style="padding:0;overflow-x:auto;"><table id="tenantTable"></table></div>
+  `;
+  renderTenantTable();
+}
+function renderTenantTable(){
+  const search = (document.getElementById('tenantSearch')?.value || '').toLowerCase();
+  let list = DB.tenants.filter(t=>t.name.toLowerCase().includes(search) || (t.email||'').toLowerCase().includes(search));
+  document.getElementById('tenantTable').innerHTML = `
+    <tr><th>Name</th><th>Email</th><th>Phone</th><th>Actions</th></tr>
+    ${list.length ? list.map(t=>`
+      <tr>
+        <td style="display:flex;align-items:center;gap:10px;"><div class="avatar-circle" style="background:#e6ecf7;color:var(--navy-800);">${initials(t.name)}</div><b>${t.name}</b></td>
+        <td>${t.email || '—'}</td><td>${t.phone || '—'}</td>
+        <td class="row-actions"><button class="icon-btn" onclick="openEditTenant('${t.id}')">${icon('edit',16)}</button><button class="icon-btn" onclick="deleteTenant('${t.id}')">${icon('trash',16)}</button></td>
+      </tr>
+    `).join('') : `<tr><td colspan="4"><div class="empty-state">No tenants match.</div></td></tr>`}
+  `;
+}
+function openAddTenant(){
+  document.getElementById('tenantModalTitle').textContent='Add Tenant'; document.getElementById('tenantEditId').value='';
+  document.getElementById('tenantName').value=''; document.getElementById('tenantEmail').value=''; document.getElementById('tenantPhone').value='';
+  document.getElementById('tenantModal').classList.add('show');
+}
+function openEditTenant(id){
+  const t = DB.tenants.find(t=>t.id===id);
+  document.getElementById('tenantModalTitle').textContent='Edit Tenant'; document.getElementById('tenantEditId').value=id;
+  document.getElementById('tenantName').value=t.name; document.getElementById('tenantEmail').value=t.email; document.getElementById('tenantPhone').value=t.phone;
+  document.getElementById('tenantModal').classList.add('show');
+}
+function saveTenant(){
+  const id = document.getElementById('tenantEditId').value;
+  const name = document.getElementById('tenantName').value.trim();
+  const email = document.getElementById('tenantEmail').value.trim();
+  const phone = document.getElementById('tenantPhone').value.trim();
+  if(!name){ alert('Enter a tenant name.'); return; }
+  if(id){ const t = DB.tenants.find(t=>t.id===id); t.name=name; t.email=email; t.phone=phone; }
+  else { DB.tenants.push({id:'te'+Date.now(), name, email, phone}); }
+  scheduleSave(); closeModal('tenantModal'); renderTenantTable();
+}
+function deleteTenant(id){ if(!confirm('Delete this tenant?')) return; DB.tenants = DB.tenants.filter(t=>t.id!==id); scheduleSave(); renderTenantTable(); }
+
+/* ============================================================ LEASES ============================================================ */
+function renderLeases(){
+  document.getElementById('page-leases').innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">Leases</h1><p class="page-sub">Track lease agreements, renewal dates, and documents</p></div>
+      <button class="btn-primary" onclick="openAddLease()">${icon('plus',15)} New Lease</button></div>
+    <div class="tabbar" id="leaseTabs"></div>
+    <div class="card" style="padding:0;overflow-x:auto;"><table id="leaseTable"></table></div>
+  `;
+  const tabs = ['All','Active','Pending','Expired','Terminated'];
+  document.getElementById('leaseTabs').innerHTML = tabs.map(t=>`<button class="tab-btn ${leaseFilter===t?'active':''}" onclick="setLeaseFilter('${t}')">${t}</button>`).join('');
+  renderLeaseTable();
+}
+function setLeaseFilter(t){ leaseFilter=t; renderLeases(); }
+function renderLeaseTable(){
+  let list = DB.leases;
+  if(leaseFilter!=='All') list = list.filter(l=>l.status===leaseFilter);
+  document.getElementById('leaseTable').innerHTML = `
+    <tr><th>Tenant</th><th>Unit</th><th>Start</th><th>End</th><th>Rent/mo</th><th>HAP / Tenant Share</th><th>Status</th><th>Actions</th></tr>
+    ${list.length ? list.map(l=>`
+      <tr>
+        <td><b>${tenantName(l.tenantId)}</b></td><td>${l.unit}</td><td>${niceDate(l.start)}</td><td>${niceDate(l.end)}</td><td><b>${fmt(l.rent)}</b></td>
+        <td>${l.voucher ? `<span class="pill pill-navy">${l.voucher}</span><br><span style="font-size:11.5px;color:var(--muted);">HAP: ${fmt(l.hap)} · Tenant: ${fmt(l.tenantShare)}</span>` : '—'}</td>
+        <td>${statusPill(l.status)}</td><td><button class="icon-btn" onclick="openEditLease('${l.id}')">${icon('edit',16)}</button></td>
+      </tr>
+    `).join('') : `<tr><td colspan="8"><div class="empty-state">No leases in this view.</div></td></tr>`}
+  `;
+}
+function populateTenantSelect(selId){ document.getElementById(selId).innerHTML = DB.tenants.map(t=>`<option value="${t.id}">${t.name}</option>`).join(''); }
+function openAddLease(){
+  document.getElementById('leaseEditId').value=''; populateTenantSelect('leaseTenant');
+  document.getElementById('leaseUnit').value=''; document.getElementById('leaseStart').value=''; document.getElementById('leaseEnd').value='';
+  document.getElementById('leaseRent').value=''; document.getElementById('leaseHap').value='';
+  document.getElementById('leaseModal').classList.add('show');
+}
+function openEditLease(id){
+  const l = DB.leases.find(l=>l.id===id);
+  document.getElementById('leaseEditId').value=id; populateTenantSelect('leaseTenant'); document.getElementById('leaseTenant').value=l.tenantId;
+  document.getElementById('leaseUnit').value=l.unit; document.getElementById('leaseStart').value=l.start; document.getElementById('leaseEnd').value=l.end;
+  document.getElementById('leaseRent').value=l.rent; document.getElementById('leaseHap').value=l.hap;
+  document.getElementById('leaseModal').classList.add('show');
+}
+function saveLease(){
+  const id = document.getElementById('leaseEditId').value;
+  const tenantId = document.getElementById('leaseTenant').value;
+  const unit = document.getElementById('leaseUnit').value.trim();
+  const start = document.getElementById('leaseStart').value;
+  const end = document.getElementById('leaseEnd').value;
+  const rent = parseFloat(document.getElementById('leaseRent').value)||0;
+  const hap = parseFloat(document.getElementById('leaseHap').value)||0;
+  if(!tenantId || !unit || !start || !end){ alert('Fill in all required fields.'); return; }
+  const tenantShare = rent - hap;
+  if(id){ const l = DB.leases.find(l=>l.id===id); Object.assign(l,{tenantId, unit, start, end, rent, hap, tenantShare}); }
+  else { DB.leases.push({id:'l'+Date.now(), tenantId, unit, propertyId:'', start, end, rent, hap, tenantShare, voucher: hap>0?'HAP Voucher':'', status:'Active'}); }
+  scheduleSave(); closeModal('leaseModal'); renderLeases();
+}
+
+/* ============================================================ RENT COLLECTION ============================================================ */
+function renderRent(){
+  document.getElementById('page-rent').innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">Rent Collection</h1><p class="page-sub">Track rent payments, receipts, and late fees</p></div>
+      <button class="btn-primary" onclick="openPayment()">${icon('plus',15)} Log Payment</button></div>
+    <div class="week-nav"><button class="icon-btn" onclick="changeRentMonth(-1)">${icon('chevLeft',16)}</button><b id="rentMonthLabel"></b><button class="icon-btn" onclick="changeRentMonth(1)">${icon('chevRight',16)}</button></div>
+    <div class="stat-grid" style="grid-template-columns:repeat(3,1fr);" id="rentStatCards"></div>
+    <div class="tabbar" id="rentTabs"></div>
+    <div class="card" style="padding:0;overflow-x:auto;"><table id="rentTable"></table></div>
+  `;
+  renderRentContent();
+}
+function changeRentMonth(delta){ rentMonth += delta; if(rentMonth<0){ rentMonth=11; rentYear--; } if(rentMonth>11){ rentMonth=0; rentYear++; } renderRentContent(); }
+function renderRentContent(){
+  const label = new Date(rentYear, rentMonth, 1).toLocaleDateString(undefined,{month:'long', year:'numeric'});
+  document.getElementById('rentMonthLabel').textContent = label;
+  const mm = String(rentMonth+1).padStart(2,'0');
+  const monthKey = rentYear+'-'+mm;
+  const charges = DB.rentCharges.filter(r=>r.dueDate.startsWith(monthKey));
+  const totalDue = charges.reduce((a,r)=>a+r.amountDue,0);
+  const collected = charges.reduce((a,r)=>a+r.paid,0);
+  const lateFees = charges.reduce((a,r)=>a+(r.lateFee||0),0);
+  document.getElementById('rentStatCards').innerHTML = `
+    <div class="stat-card"><div class="stat-label">Total Due — ${label}</div><div class="stat-value">${fmt(totalDue)}</div><div class="stat-foot">${charges.length} charges</div></div>
+    <div class="stat-card"><div class="stat-label">Collected</div><div class="stat-value" style="color:var(--green);">${fmt(collected)}</div><div class="stat-foot">${totalDue>0?((collected/totalDue*100).toFixed(0)):0}% of due</div></div>
+    <div class="stat-card"><div class="stat-label">Late Fees</div><div class="stat-value">${fmt(lateFees)}</div><div class="stat-foot">${charges.filter(r=>r.lateFee>0).length} with late fee</div></div>
+  `;
+  const tabs = ['All','Pending','Paid','Partial','Overdue','Waived'];
+  document.getElementById('rentTabs').innerHTML = tabs.map(t=>`<button class="tab-btn ${rentFilter===t?'active':''}" onclick="setRentFilter('${t}')">${t}</button>`).join('');
+  let list = charges;
+  if(rentFilter!=='All') list = list.filter(r=>r.status===rentFilter);
+  document.getElementById('rentTable').innerHTML = `
+    <tr><th>Tenant</th><th>Property</th><th>Due Date</th><th>Paid Date</th><th>Amount Due</th><th>Paid</th><th>Late Fee</th><th>Receipt #</th><th>Method</th><th>Status</th></tr>
+    ${list.length ? list.map(r=>{ const lease = leaseById(r.leaseId); return `<tr>
+        <td><b>${tenantName(lease.tenantId)}</b></td><td>${lease.unit}</td><td>${niceDate(r.dueDate)}</td><td>${niceDate(r.paidDate)}</td>
+        <td><b>${fmt(r.amountDue)}</b></td><td class="amount-pos">${fmt(r.paid)}</td><td>${r.lateFee ? fmt(r.lateFee) : '—'}</td>
+        <td>${r.receipt || '—'}</td><td>${r.method || '—'}</td><td>${statusPill(r.status)}</td>
+      </tr>`; }).join('') : `<tr><td colspan="10"><div class="empty-state">No charges for this filter.</div></td></tr>`}
+  `;
+}
+function setRentFilter(t){ rentFilter=t; renderRentContent(); }
+function openPayment(){
+  document.getElementById('payLease').innerHTML = DB.leases.map(l=>`<option value="${l.id}">${tenantName(l.tenantId)} — ${l.unit}</option>`).join('');
+  document.getElementById('payDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('payAmount').value=''; document.getElementById('payReceipt').value='';
+  document.getElementById('paymentModal').classList.add('show');
+}
+function savePayment(){
+  const leaseId = document.getElementById('payLease').value;
+  const paidDate = document.getElementById('payDate').value;
+  const amount = parseFloat(document.getElementById('payAmount').value);
+  const method = document.getElementById('payMethod').value;
+  const receipt = document.getElementById('payReceipt').value.trim();
+  if(!leaseId || !paidDate || !amount){ alert('Fill in all fields.'); return; }
+  const lease = leaseById(leaseId);
+  const monthKey = paidDate.slice(0,7);
+  let charge = DB.rentCharges.find(r=>r.leaseId===leaseId && r.dueDate.startsWith(monthKey));
+  if(!charge){ charge = {id:'r'+Date.now(), leaseId, dueDate: monthKey+'-01', amountDue: lease.rent, paid:0, paidDate:'', method:'', receipt:'', lateFee:0, status:'Pending'}; DB.rentCharges.push(charge); }
+  charge.paid += amount; charge.paidDate = paidDate; charge.method = method; charge.receipt = receipt || charge.receipt;
+  charge.status = charge.paid >= charge.amountDue ? 'Paid' : 'Partial';
+  scheduleSave(); closeModal('paymentModal'); renderRentContent();
+}
+
+/* ============================================================ EXPENSES ============================================================ */
+function renderExpenses(){
+  document.getElementById('page-expenses').innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">Expenses</h1><p class="page-sub">Track property expenses, receipts, and payment methods</p></div>
+      <button class="btn-primary" onclick="openAddExpense()">${icon('plus',15)} Add Expense</button></div>
+    <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);" id="expenseStatCards"></div>
+    <div class="filters" id="expenseFilters"></div>
+    <div class="card" style="padding:0;overflow-x:auto;"><table id="expenseTable"></table></div>
+  `;
+  renderExpenseContent();
+}
+const EXPENSE_CATS = ['Mortgage','Insurance','Taxes','Utilities','Repairs','Maintenance','Management Fees','Advertising','Supplies','Legal','Accounting','Landscaping','Pest Control','Cleaning','Other'];
+function renderExpenseContent(){
+  const total = DB.expenses.reduce((a,e)=>a+e.amount,0);
+  const byCat = {}; DB.expenses.forEach(e=>byCat[e.category]=(byCat[e.category]||0)+e.amount);
+  const other = byCat['Other']||0, mortgage = byCat['Mortgage']||0, utilities = byCat['Utilities']||0;
+  document.getElementById('expenseStatCards').innerHTML = `
+    <div class="stat-card"><div class="stat-label">Total Expenses</div><div class="stat-value" style="color:var(--red);">${fmt(total)}</div></div>
+    <div class="stat-card"><div class="stat-label">Other</div><div class="stat-value">${fmt(other)}</div></div>
+    <div class="stat-card"><div class="stat-label">Mortgage</div><div class="stat-value">${fmt(mortgage)}</div></div>
+    <div class="stat-card"><div class="stat-label">Utilities</div><div class="stat-value">${fmt(utilities)}</div></div>
+  `;
+  document.getElementById('expenseFilters').innerHTML = ['All',...EXPENSE_CATS].map(c=>`<button class="filter-chip ${expenseFilter===c?'active':''}" onclick="setExpenseFilter('${c}')">${c}</button>`).join('');
+  let list = [...DB.expenses].sort((a,b)=>b.date.localeCompare(a.date));
+  if(expenseFilter!=='All') list = list.filter(e=>e.category===expenseFilter);
+  document.getElementById('expenseTable').innerHTML = `
+    <tr><th>Date</th><th>Property / Unit</th><th>Category</th><th>Description</th><th>Vendor</th><th>Amount</th><th>Method</th><th>Actions</th></tr>
+    ${list.length ? list.map(e=>`
+      <tr><td>${niceDate(e.date)}</td><td>${e.property}</td><td>${e.category}</td><td>${e.desc}</td><td>${e.vendor}</td>
+      <td class="amount-neg">${fmt(e.amount)}</td><td>${e.method}</td><td><button class="icon-btn" onclick="deleteExpense('${e.id}')">${icon('trash',16)}</button></td></tr>
+    `).join('') : `<tr><td colspan="8"><div class="empty-state">No expenses in this category.</div></td></tr>`}
+  `;
+}
+function setExpenseFilter(c){ expenseFilter=c; renderExpenseContent(); }
+function openAddExpense(){
+  document.getElementById('expProperty').innerHTML = '<option value="No property">No property</option>' + DB.properties.map(p=>`<option value="${p.name}">${p.name}</option>`).join('');
+  document.getElementById('expDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('expAmount').value=''; document.getElementById('expDesc').value=''; document.getElementById('expVendor').value='';
+  document.getElementById('expenseModal').classList.add('show');
+}
+function saveExpense(){
+  const date = document.getElementById('expDate').value;
+  const amount = parseFloat(document.getElementById('expAmount').value);
+  const property = document.getElementById('expProperty').value;
+  const category = document.getElementById('expCategory').value;
+  const desc = document.getElementById('expDesc').value.trim();
+  const vendor = document.getElementById('expVendor').value.trim();
+  const method = document.getElementById('expMethod').value;
+  if(!date || !amount || !desc){ alert('Fill in date, amount, and description.'); return; }
+  DB.expenses.push({id:'e'+Date.now(), date, property, category, desc, vendor, amount, method});
+  scheduleSave(); closeModal('expenseModal'); renderExpenseContent();
+}
+function deleteExpense(id){ if(!confirm('Delete this expense?')) return; DB.expenses = DB.expenses.filter(e=>e.id!==id); scheduleSave(); renderExpenseContent(); }
+
+/* ============================================================ TIME CARDS ============================================================ */
+function getWeekDates(offset){
+  const now = new Date(); const day = now.getDay();
+  const sunday = new Date(now); sunday.setDate(now.getDate()-day+(offset*7));
+  const arr=[]; for(let i=0;i<7;i++){ const dt=new Date(sunday); dt.setDate(sunday.getDate()+i); arr.push(dt.toISOString().slice(0,10)); }
+  return arr;
+}
+function renderTimePage(){
+  if(!selectedWorkerId && DB.workers.length) selectedWorkerId = DB.workers[0].id;
+  document.getElementById('page-time').innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">Time Cards</h1><p class="page-sub">Track daily hours for laborers and caregivers. Weeks run Sunday through Saturday.</p></div>
+      <button class="btn-primary" onclick="openAddWorker()">${icon('plus',15)} Add Worker</button></div>
+    <div class="tt-grid">
+      <div class="card" style="padding:14px;"><div class="card-title" style="font-size:12.5px;">Workers (${DB.workers.length})</div><div id="workerList"></div></div>
+      <div class="card" id="timeCardBody"></div>
+    </div>
+  `;
+  renderWorkerList(); renderTimeCard();
+}
+function renderWorkerList(){
+  document.getElementById('workerList').innerHTML = DB.workers.map(w=>`
+    <div class="worker-list-item ${w.id===selectedWorkerId?'active':''}" onclick="selectWorker('${w.id}')">
+      <div><div class="w-name">${w.name}</div><div class="w-role">${w.roleLabel}</div></div>
+    </div>
+  `).join('');
+}
+function selectWorker(id){ selectedWorkerId=id; renderWorkerList(); renderTimeCard(); }
+function changeWeek(delta){ weekOffset+=delta; renderTimeCard(); }
+const TYPE_COLORS = {Work:{bg:'#e6ecf7',c:'var(--navy-800)'}, Vacation:{bg:'#e6f0fb',c:'#2f6fb8'}, Sick:{bg:'#faeaea',c:'var(--red)'}, Holiday:{bg:'#fbf0da',c:'var(--amber)'}, 'Day Off':{bg:'#eef0f4',c:'var(--muted)'}};
+function renderTimeCard(){
+  const worker = DB.workers.find(w=>w.id===selectedWorkerId);
+  const body = document.getElementById('timeCardBody');
+  if(!worker){ body.innerHTML = `<div class="empty-state">Select a worker.</div>`; return; }
+  const week = getWeekDates(weekOffset);
+  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const entries = DB.timeEntries[worker.id] || {};
+  let totalHours = 0, daysLogged = 0;
+  week.forEach(d=>{ const e = entries[d]; if(e){ daysLogged++; if(e.type==='Work') totalHours += Number(e.hours||0); } });
+  const basePay = worker.payType==='hourly' ? (totalHours*worker.rate) : worker.rate;
+  body.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+      <div class="card-title" style="margin:0;">${worker.name} <span style="font-weight:400;color:var(--muted);font-size:12px;">— ${worker.roleLabel}</span></div>
+      <button class="btn-outline" onclick="window.print()">${icon('printer',15)} Print Time Card</button>
+    </div>
+    <div class="week-nav">
+      <button class="icon-btn" onclick="changeWeek(-1)">${icon('chevLeft',15)} Prev</button>
+      <b>${niceDate(week[0])} – ${niceDate(week[6])}</b>
+      <button class="icon-btn" onclick="changeWeek(1)">Next ${icon('chevRight',15)}</button>
+      <button class="filter-chip" onclick="weekOffset=0; renderTimeCard();">This Week</button>
+    </div>
+    <div class="day-grid">
+      ${week.map((d,i)=>{
+        const e = entries[d]; const tc = e ? TYPE_COLORS[e.type] : null;
+        return `<div class="day-cell">
+          <div class="d-label">${dayNames[i]}</div><div class="d-date">${new Date(d+'T00:00:00').getDate()}</div>
+          ${e ? `<div class="d-status" style="background:${tc.bg};color:${tc.c};">${e.type}${e.type==='Work'?' · '+e.hours+'h':''}</div>` : ''}
+          <button class="day-log-btn" onclick="openLogModal('${worker.id}','${d}')">${e?'Edit':'+ Log Day'}</button>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="tt-summary">
+      <div class="item"><b>${daysLogged}</b>Work Days</div>
+      <div class="item"><b>${totalHours}</b>Total Hours</div>
+      <div class="item"><b style="color:var(--green);">${fmt(basePay)}</b>Base Pay</div>
+    </div>
+    <div class="reimb-box">
+      <div class="field" style="flex:1;min-width:120px;"><label>Reimbursement Amount ($)</label><input type="number" id="reimbAmount" step="0.01" placeholder="0.00"></div>
+      <div class="field" style="flex:2;min-width:200px;"><label>Note (mileage, supplies, etc.)</label><input type="text" id="reimbNote" placeholder="e.g. Gas reimbursement — 42 miles"></div>
+      <button class="btn-primary" onclick="alert('Reimbursement saved.')">Save</button>
+    </div>
+  `;
+}
+function openLogModal(workerId, dateStr){
+  logModalCtx = {workerId, dateStr};
+  const existing = (DB.timeEntries[workerId]||{})[dateStr];
+  document.getElementById('logModalTitle').textContent = 'Log ' + niceDate(dateStr);
+  document.getElementById('logType').value = existing ? existing.type : 'Work';
+  document.getElementById('logHours').value = existing ? (existing.hours||'') : 8;
+  toggleHoursField();
+  document.getElementById('logModal').classList.add('show');
+}
+document.addEventListener('change', e=>{ if(e.target && e.target.id==='logType') toggleHoursField(); });
+function toggleHoursField(){ document.getElementById('logHoursField').style.display = (document.getElementById('logType').value==='Work') ? 'flex' : 'none'; }
+function saveDayLog(){
+  const {workerId, dateStr} = logModalCtx;
+  const type = document.getElementById('logType').value;
+  const hours = document.getElementById('logHours').value;
+  if(!DB.timeEntries[workerId]) DB.timeEntries[workerId]={};
+  DB.timeEntries[workerId][dateStr] = {type, hours: type==='Work' ? Number(hours||0) : 0};
+  scheduleSave(); closeModal('logModal'); renderTimeCard();
+}
+function openAddWorker(){
+  document.getElementById('newWorkerName').value=''; document.getElementById('newWorkerRole').value='';
+  document.getElementById('newWorkerRate').value=''; document.getElementById('newWorkerPayType').value='hourly';
+  document.getElementById('workerModal').classList.add('show');
+}
+function saveNewWorker(){
+  const name = document.getElementById('newWorkerName').value.trim();
+  const roleLabel = document.getElementById('newWorkerRole').value.trim();
+  const payType = document.getElementById('newWorkerPayType').value;
+  const rate = parseFloat(document.getElementById('newWorkerRate').value)||0;
+  if(!name){ alert('Enter a worker name.'); return; }
+  DB.workers.push({id:'w'+Date.now(), name, roleLabel, payType, rate});
+  scheduleSave(); closeModal('workerModal'); renderTimePage();
+}
+
+/* ============================================================ REPORTS ============================================================ */
+function renderReports(){
+  document.getElementById('page-reports').innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">Reports</h1><p class="page-sub">Monthly owner statements, income summaries, and GHURA-ready exports</p></div></div>
+    <div class="tabbar" id="reportTabs"></div>
+    <div id="reportBody"></div>
+  `;
+  document.getElementById('reportTabs').innerHTML = [['owner','Owner Statement'],['yearly','Yearly Summary'],['balances','Tenant Balances']]
+    .map(([id,label])=>`<button class="tab-btn ${reportTab===id?'active':''}" onclick="setReportTab('${id}')">${label}</button>`).join('');
+  renderReportBody();
+}
+function setReportTab(t){ reportTab=t; renderReports(); }
+function renderReportBody(){
+  const el = document.getElementById('reportBody');
+  const now = new Date();
+  const monthKey = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const monthLabel = now.toLocaleDateString(undefined,{month:'long', year:'numeric'});
+  if(reportTab==='owner'){
+    const charges = DB.rentCharges.filter(r=>r.dueDate.startsWith(monthKey));
+    const rentDue = charges.reduce((a,r)=>a+r.amountDue,0);
+    const rentCollected = charges.reduce((a,r)=>a+r.paid,0);
+    const lateFees = charges.reduce((a,r)=>a+(r.lateFee||0),0);
+    const exp = DB.expenses.filter(e=>e.date.startsWith(monthKey));
+    const totalExp = exp.reduce((a,e)=>a+e.amount,0);
+    const net = rentCollected - totalExp;
+    el.innerHTML = `
+      <div class="card" style="background:var(--navy-900);color:#fff;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;">
+          <div><div style="font-size:18px;font-weight:700;">Owner Statement</div><div style="color:#9db0d6;font-size:12.5px;">${monthLabel} — All Properties</div></div>
+          <button class="btn-outline" style="background:#fff;" onclick="window.print()">${icon('printer',15)} Print / Export</button>
+        </div>
+        <div style="display:flex;gap:40px;margin-top:18px;flex-wrap:wrap;">
+          <div><div style="color:#9db0d6;font-size:10.5px;text-transform:uppercase;">Rent Due</div><div style="font-size:19px;font-weight:700;">${fmt(rentDue)}</div></div>
+          <div><div style="color:#9db0d6;font-size:10.5px;text-transform:uppercase;">Rent Collected</div><div style="font-size:19px;font-weight:700;">${fmt(rentCollected)}</div></div>
+          <div><div style="color:#9db0d6;font-size:10.5px;text-transform:uppercase;">Late Fees</div><div style="font-size:19px;font-weight:700;">${fmt(lateFees)}</div></div>
+          <div><div style="color:#9db0d6;font-size:10.5px;text-transform:uppercase;">Total Expenses</div><div style="font-size:19px;font-weight:700;">${fmt(totalExp)}</div></div>
+        </div>
+        <div style="margin-top:14px;border-top:1px solid rgba(255,255,255,.15);padding-top:14px;font-size:23px;font-weight:700;color:${net>=0?'#7cd9a3':'#ff9b9b'};">Net Income: ${fmt(net)}</div>
+      </div>
+      <div class="card"><div class="card-title">Rent Payments</div>
+        <table><tr><th>Tenant</th><th>Property</th><th>Due Date</th><th>Paid Date</th><th>Amount Due</th><th>Paid</th><th>Status</th></tr>
+          ${charges.length ? charges.map(r=>{ const lease = leaseById(r.leaseId); return `<tr><td>${tenantName(lease.tenantId)}</td><td>${lease.unit}</td><td>${niceDate(r.dueDate)}</td><td>${niceDate(r.paidDate)}</td><td>${fmt(r.amountDue)}</td><td class="amount-pos">${fmt(r.paid)}</td><td>${statusPill(r.status)}</td></tr>`; }).join('') : `<tr><td colspan="7"><div class="empty-state">No rent payments this period.</div></td></tr>`}
+        </table>
+      </div>
+      <div class="card"><div class="card-title">Expenses</div>
+        ${exp.length ? `<table><tr><th>Date</th><th>Property</th><th>Category</th><th>Description</th><th>Amount</th></tr>
+          ${exp.map(e=>`<tr><td>${niceDate(e.date)}</td><td>${e.property}</td><td>${e.category}</td><td>${e.desc}</td><td class="amount-neg">${fmt(e.amount)}</td></tr>`).join('')}
+        </table>` : `<div class="empty-state">No expenses for this period</div>`}
+      </div>
+    `;
+  } else if(reportTab==='yearly'){
+    const year = now.getFullYear();
+    const {income, expense} = computeYearTotals(year);
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    el.innerHTML = `
+      <div class="card"><div class="card-title">Yearly Summary — ${year}</div>
+        <table><tr><th>Month</th><th>Income</th><th>Expenses</th><th>Net</th></tr>
+          ${months.map((m,i)=>`<tr><td>${m}</td><td class="amount-pos">${fmt(income[i])}</td><td class="amount-neg">${fmt(expense[i])}</td><td><b>${fmt(income[i]-expense[i])}</b></td></tr>`).join('')}
+          <tr><td><b>Total</b></td><td class="amount-pos"><b>${fmt(income.reduce((a,b)=>a+b,0))}</b></td><td class="amount-neg"><b>${fmt(expense.reduce((a,b)=>a+b,0))}</b></td><td><b>${fmt(income.reduce((a,b)=>a+b,0)-expense.reduce((a,b)=>a+b,0))}</b></td></tr>
+        </table>
+      </div>
+    `;
+  } else {
+    el.innerHTML = `
+      <div class="card"><div class="card-title">Tenant Balances</div>
+        <table><tr><th>Tenant</th><th>Unit</th><th>Rent/mo</th><th>Total Paid to Date</th><th>Balance</th></tr>
+          ${DB.leases.map(l=>{
+            const paid = DB.rentCharges.filter(r=>r.leaseId===l.id).reduce((a,r)=>a+r.paid,0);
+            const due = DB.rentCharges.filter(r=>r.leaseId===l.id).reduce((a,r)=>a+r.amountDue,0);
+            return `<tr><td>${tenantName(l.tenantId)}</td><td>${l.unit}</td><td>${fmt(l.rent)}</td><td class="amount-pos">${fmt(paid)}</td><td class="${due-paid>0?'amount-neg':'amount-pos'}">${fmt(due-paid)}</td></tr>`;
+          }).join('')}
+        </table>
+      </div>
+    `;
+  }
+}
+
+/* ============================================================ WORK ORDERS ============================================================ */
+function renderWorkOrders(){
+  const open = DB.workOrders.filter(w=>w.status==='Open').length;
+  const completed = DB.workOrders.filter(w=>w.status==='Completed').length;
+  const totalCost = DB.workOrders.reduce((a,w)=>a+(w.cost||0),0);
+  document.getElementById('page-workorders').innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">Work Orders</h1><p class="page-sub">Track maintenance requests, repairs, and vendor assignments</p></div>
+      <button class="btn-primary" onclick="openAddWorkOrder()">${icon('plus',15)} New Work Order</button></div>
+    <div class="stat-grid" style="grid-template-columns:repeat(3,1fr);">
+      <div class="stat-card"><div class="stat-label">Open Orders</div><div class="stat-value">${open}</div></div>
+      <div class="stat-card"><div class="stat-label">Completed</div><div class="stat-value">${completed}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Repair Cost</div><div class="stat-value">${fmt(totalCost)}</div></div>
+    </div>
+    <div class="tabbar" id="woTabs"></div>
+    <div id="woList"></div>
+  `;
+  document.getElementById('woTabs').innerHTML = ['All','Open','Assigned','In Progress','Completed','Cancelled'].map(t=>`<button class="tab-btn ${woFilter===t?'active':''}" onclick="setWoFilter('${t}')">${t}</button>`).join('');
+  renderWoList();
+}
+function setWoFilter(t){ woFilter=t; renderWoList(); }
+function renderWoList(){
+  let list = DB.workOrders;
+  if(woFilter!=='All') list = list.filter(w=>w.status===woFilter);
+  const wrap = document.getElementById('woList');
+  if(!list.length){
+    wrap.innerHTML = `<div class="card"><div class="empty-state"><div class="icon-wrap">${icon('wrench',24)}</div><b>No work orders</b><div style="margin:6px 0 14px;">Submit your first maintenance request.</div><button class="btn-primary" onclick="openAddWorkOrder()" style="margin:0 auto;">${icon('plus',15)} New Work Order</button></div></div>`;
+    return;
+  }
+  wrap.innerHTML = `<div class="card" style="padding:0;overflow-x:auto;"><table>
+    <tr><th>Property</th><th>Issue</th><th>Priority</th><th>Status</th><th>Actions</th></tr>
+    ${list.map(w=>`<tr><td>${w.property}</td><td>${w.issue}</td><td>${w.priority}</td><td>${statusPill(w.status)}</td><td><button class="icon-btn" onclick="deleteWorkOrder('${w.id}')">${icon('trash',16)}</button></td></tr>`).join('')}
+  </table></div>`;
+}
+function openAddWorkOrder(){
+  document.getElementById('woProperty').innerHTML = DB.properties.map(p=>`<option value="${p.name}">${p.name}</option>`).join('');
+  document.getElementById('woIssue').value=''; document.getElementById('woModal').classList.add('show');
+}
+function saveWorkOrder(){
+  const property = document.getElementById('woProperty').value;
+  const issue = document.getElementById('woIssue').value.trim();
+  const priority = document.getElementById('woPriority').value;
+  const status = document.getElementById('woStatus').value;
+  if(!issue){ alert('Describe the issue.'); return; }
+  DB.workOrders.push({id:'wo'+Date.now(), property, issue, priority, status, cost:0});
+  scheduleSave(); closeModal('woModal'); renderWorkOrders();
+}
+function deleteWorkOrder(id){ if(!confirm('Delete this work order?')) return; DB.workOrders = DB.workOrders.filter(w=>w.id!==id); scheduleSave(); renderWorkOrders(); }
+
+/* ============================================================ VENDORS ============================================================ */
+function renderVendors(){
+  document.getElementById('page-vendors').innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">Vendors</h1><p class="page-sub">Manage contractors, service providers, and repair vendors</p></div>
+      <button class="btn-primary" onclick="openAddVendor()">${icon('plus',15)} Add Vendor</button></div>
+    <input class="search-input" id="vendorSearch" placeholder="Search vendors..." oninput="renderVendorList()" style="margin-bottom:14px;">
+    <div id="vendorList"></div>
+  `;
+  renderVendorList();
+}
+function renderVendorList(){
+  const search = (document.getElementById('vendorSearch')?.value||'').toLowerCase();
+  const list = DB.vendors.filter(v=>v.name.toLowerCase().includes(search));
+  const wrap = document.getElementById('vendorList');
+  if(!list.length){
+    wrap.innerHTML = `<div class="card"><div class="empty-state"><div class="icon-wrap">${icon('clipboard',24)}</div><b>No vendors yet</b><div style="margin:6px 0 14px;">Add contractors and service providers to assign to work orders.</div><button class="btn-primary" onclick="openAddVendor()" style="margin:0 auto;">${icon('plus',15)} Add Vendor</button></div></div>`;
+    return;
+  }
+  wrap.innerHTML = list.map(v=>`
+    <div class="list-row">
+      <div style="display:flex;gap:14px;align-items:center;"><div class="list-avatar">${icon('clipboard',18)}</div><div><div class="list-title">${v.name}</div><div class="list-sub">${v.service} · ${v.phone}</div></div></div>
+      <button class="icon-btn" onclick="deleteVendor('${v.id}')">${icon('trash',16)}</button>
+    </div>
+  `).join('');
+}
+function openAddVendor(){
+  document.getElementById('vendorName').value=''; document.getElementById('vendorService').value=''; document.getElementById('vendorPhone').value='';
+  document.getElementById('vendorModal').classList.add('show');
+}
+function saveVendor(){
+  const name = document.getElementById('vendorName').value.trim();
+  const service = document.getElementById('vendorService').value.trim();
+  const phone = document.getElementById('vendorPhone').value.trim();
+  if(!name){ alert('Enter a vendor name.'); return; }
+  DB.vendors.push({id:'v'+Date.now(), name, service, phone});
+  scheduleSave(); closeModal('vendorModal'); renderVendorList();
+}
+function deleteVendor(id){ if(!confirm('Delete this vendor?')) return; DB.vendors = DB.vendors.filter(v=>v.id!==id); scheduleSave(); renderVendorList(); }
+
+/* ============================================================ SETTINGS ============================================================ */
+async function renderSettings(){
+  document.getElementById('page-settings').innerHTML = `
+    <div class="page-header"><div><h1 class="page-title">Settings</h1><p class="page-sub">Manage team members and account access</p></div>
+      <button class="btn-primary" onclick="openAddUser()">${icon('plus',15)} Add User</button></div>
+    <div class="card" style="padding:0;overflow-x:auto;"><table id="userTable"><tr><td style="padding:20px;color:var(--muted);">Loading team...</td></tr></table></div>
+  `;
+  const { data: rows, error } = await supabase.from('profiles').select('*').eq('app', APP_NAME).order('created_at');
+  if(error){ document.getElementById('userTable').innerHTML = `<tr><td style="padding:20px;color:var(--red);">Could not load team members: ${error.message}</td></tr>`; return; }
+  document.getElementById('userTable').innerHTML = `
+    <tr><th>Name</th><th>Role</th><th>Actions</th></tr>
+    ${rows.map(u=>{
+      const asUser = {role:u.role, customLabel:u.custom_label, pages:u.pages};
+      return `<tr>
+        <td><b>${u.name}</b></td>
+        <td><span class="role-badge role-${u.role}" title="${roleDescription(asUser)}">${roleLabel(asUser)}</span></td>
+        <td>${u.user_id!==currentUser.authUserId ? `<button class="icon-btn" onclick="deleteUser('${u.id}')">${icon('trash',16)}</button>` : `<span style="color:var(--muted);font-size:12px;">You</span>`}</td>
+      </tr>`;
+    }).join('')}
+  `;
+}
+function openAddUser(){
+  document.getElementById('newUserName').value=''; document.getElementById('newUserPin').value='';
+  document.getElementById('newUserRole').value='manager';
+  document.getElementById('customRoleLabel').value='';
+  buildCustomPermList([]);
+  updateRoleDesc();
+  document.getElementById('userModal').classList.add('show');
+}
+function buildCustomPermList(checkedIds){
+  document.getElementById('customPermList').innerHTML = CUSTOM_PERM_PAGES.map(p=>`
+    <label class="perm-check-row"><input type="checkbox" value="${p.id}" ${checkedIds.includes(p.id)?'checked':''}> ${p.label}</label>
+  `).join('');
+}
+function updateRoleDesc(){
+  const role = document.getElementById('newUserRole').value;
+  const customFields = document.getElementById('customRoleFields');
+  if(role==='custom'){
+    customFields.style.display='block';
+    document.getElementById('roleDescBox').textContent = ROLE_DESCRIPTIONS.custom;
+  } else {
+    customFields.style.display='none';
+    document.getElementById('roleDescBox').textContent = ROLE_DESCRIPTIONS[role];
+  }
+}
+async function saveNewUser(){
+  const name = document.getElementById('newUserName').value.trim();
+  const pin = document.getElementById('newUserPin').value.trim();
+  const role = document.getElementById('newUserRole').value;
+  if(!name || pin.length<4){ alert('Enter a name and a PIN of at least 4 characters.'); return; }
+  let customLabel = '', pages = [];
+  if(role==='custom'){
+    customLabel = document.getElementById('customRoleLabel').value.trim();
+    pages = Array.from(document.querySelectorAll('#customPermList input:checked')).map(el=>el.value);
+    if(!customLabel){ alert('Give this custom role a title (e.g. Bookkeeper).'); return; }
+    if(!pages.length){ alert('Select at least one page this person can access.'); return; }
+  }
+  const { data: { session } } = await supabase.auth.getSession();
+  const res = await fetch('/api/create-user', {
+    method:'POST',
+    headers:{'Content-Type':'application/json', 'Authorization':'Bearer '+session.access_token},
+    body: JSON.stringify({ name, pin, role, app: APP_NAME, customLabel, pages })
+  });
+  const result = await res.json();
+  if(!res.ok){ alert(result.error || 'Could not create user.'); return; }
+  alert(`User created. Tell ${name} to pick their name on the sign-in screen and enter PIN: ${pin}`);
+  closeModal('userModal');
+  renderSettings();
+}
+async function deleteUser(profileId){
+  if(!confirm('Remove this person\'s access to PropTrack?')) return;
+  const { error } = await supabase.from('profiles').delete().eq('id', profileId);
+  if(error){ alert('Could not remove: ' + error.message); return; }
+  renderSettings();
+}
+
+/* ============================================================ MODAL HELPERS ============================================================ */
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+document.addEventListener('click', e=>{ if(e.target.classList && e.target.classList.contains('modal-overlay')) e.target.classList.remove('show'); });
+
+/* ============================================================ BOOT ============================================================ */
+(async function boot(){
+  await checkExistingSession();
+})();
+</script>
 </body>
 </html>
